@@ -92,9 +92,10 @@ df_users_benchmarks = df_distances \
 
 # Формирование финального датафрейма для витрины 2
 df_dm2 = df_users_benchmarks \
-    .join(df_message_benchmarks, ['zone_id','week','month'], how = 'left') \
-    .join(df_reaction_benchmarks, ['zone_id','week','month'], how ='left') \
-    .join(df_subscription_benchmarks, ['zone_id','week','month'], how ='left') \
+    .join(df_message_benchmarks, ['zone_id','week','month'], how = 'full') \
+    .join(df_reaction_benchmarks, ['zone_id','week','month'], how ='full') \
+    .join(df_subscription_benchmarks, ['zone_id','week','month'], how ='full') \
+    .fillna(0) \
     .select('month','week','zone_id','week_message','week_reaction','week_subscription','week_user','month_message','month_reaction','month_subscription','month_user') \
     .orderBy('month', 'week','zone_id')
 
