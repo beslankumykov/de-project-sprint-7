@@ -57,7 +57,7 @@ df_distances = df_messages.crossJoin(df_geo.hint("broadcast")) \
     ) \
     .withColumn('rank', F.row_number().over(Window().partitionBy('message_id').orderBy('dist'))) \
     .filter(F.col('rank')==1) \
-    .select('message_id', 'event_type', 'user_id', 'message_lat', 'message_lon', 'ts', 'dist', 'message_from', 'message_to', 'id')
+    .select('message_id', 'event_type', 'user_id', 'message_lat', 'message_lon', 'ts', 'dist', 'message_from', 'message_to', 'id', 'city')
 
 # Определение пользователей, подписанных на один канал
 users_in_chanel = df_subscriptions.select('subscription_channel', 'user_id')
