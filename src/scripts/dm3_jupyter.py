@@ -57,7 +57,7 @@ df_distances = df_messages.crossJoin(df_geo.hint("broadcast")) \
     ) \
     .withColumn('rank', F.row_number().over(Window().partitionBy('message_id').orderBy('dist'))) \
     .filter(F.col('rank')==1) \
-    .select('message_id', 'event_type', 'user_id', 'message_lat', 'message_lon', 'ts', 'dist', 'message_from', 'message_to', 'id', 'city')
+    .select('message_id', 'event_type', 'user_id', 'message_lat', 'message_lon', 'ts', 'dist', 'message_from', 'message_to', 'id', 'tz')
 
 # Определение пользователей, подписанных на один канал
 users_in_chanel = df_subscriptions.select('subscription_channel', 'user_id')
@@ -73,6 +73,7 @@ users_pair = users_pair.join(contacts, [((users_pair.user_left == contacts.messa
 window = Window().partitionBy('user_id').orderBy(F.desc('ts'))
 user_coordinates = df_distances.select(
     'user_id', 
+    'tz',
     F.first('message_lat', True).over(window).alias('act_lat'),
     F.first('message_lon', True).over(window).alias('act_lng'),
     F.first('id', True).over(window).alias('zone_id'),
@@ -82,9 +83,9 @@ user_coordinates = df_distances.select(
 # Формирование финального датафрейма для витрины 3
 df_dm3 = users_pair \
     .join(user_coordinates, users_pair.user_left == user_coordinates.user_id, 'left') \
-    .withColumnRenamed('user_id', 'lu').withColumnRenamed('act_lat', 'lat1').withColumnRenamed('act_lng', 'lng1').withColumnRenamed('zone_id', 'zone_id1').withColumnRenamed('act_ts', 'act_ts1') \
+    .withColumnRenamed('user_id', 'lu').withColumnRenamed('act_lat', 'lat1').withColumnRenamed('act_lng', 'lng1').withColumnRenamed('zone_id', 'zone_id1').withColumnRenamed('act_ts', 'act_ts1').withColumnRenamed('tz', 'tz1') \
     .join(user_coordinates, users_pair.user_right == user_coordinates.user_id, 'left') \
-    .withColumnRenamed('user_id', 'ru').withColumnRenamed('act_lat', 'lat2').withColumnRenamed('act_lng', 'lng2').withColumnRenamed('zone_id', 'zone_id2').withColumnRenamed('act_ts', 'act_ts2') \
+    .withColumnRenamed('user_id', 'ru').withColumnRenamed('act_lat', 'lat2').withColumnRenamed('act_lng', 'lng2').withColumnRenamed('zone_id', 'zone_id2').withColumnRenamed('act_ts', 'act_ts2').withColumnRenamed('tz', 'tz2') \
     .withColumn('distance',
         F.lit(2)*F.lit(6371)*F.asin(
             F.sqrt(
@@ -99,7 +100,7 @@ df_dm3 = users_pair \
         'user_right',
         F.current_timestamp().alias('processed_dttm'),
         F.when(F.col('zone_id1') == F.col('zone_id2'), F.col('zone_id1')).alias('zone_id'),
-        F.from_utc_timestamp(F.current_timestamp(), 'Australia/Sydney').alias('local_time'),
+        F.from_utc_timestamp(F.col('act_ts1'), F.col('tz1')).alias('local_time')
     )
 
 # Запись на HDFS
